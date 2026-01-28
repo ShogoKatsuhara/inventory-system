@@ -51,75 +51,6 @@
             padding: 40px 30px;
         }
 
-        .setup-section {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-
-        .setup-section h2 {
-            color: #667eea;
-            font-size: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
         .loading {
             text-align: center;
             padding: 40px;
@@ -259,57 +190,6 @@
             transform: translateY(-2px);
         }
 
-        .btn-back {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-back:hover {
-            background: #5a6268;
-        }
-
-        .instructions {
-            background: #e7f3ff;
-            border-left: 4px solid #2196F3;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            font-size: 13px;
-            line-height: 1.8;
-        }
-
-        .instructions h3 {
-            color: #1976D2;
-            margin-bottom: 12px;
-            font-size: 16px;
-        }
-
-        .instructions ol {
-            margin-left: 20px;
-        }
-
-        .instructions li {
-            margin-bottom: 10px;
-        }
-
-        .instructions code {
-            background: #fff;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-
-        .qr-example {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            margin-top: 15px;
-            font-family: monospace;
-            font-size: 12px;
-            word-break: break-all;
-        }
-
         @media (max-width: 768px) {
             body {
                 padding: 0;
@@ -334,28 +214,7 @@
         </div>
 
         <div class="content">
-            <div id="setupView" class="setup-section">
-                <h2>🔗 初期設定</h2>
-                <div class="instructions">
-                    <h3>設定方法</h3>
-                    <ol>
-                        <li>Google Apps Script URLを下記に入力</li>
-                        <li>「設定を保存」をクリック</li>
-                        <li>この画面のURLをQRコードに埋め込む</li>
-                    </ol>
-                    <div class="qr-example">
-                        QRコード例:<br>
-                        <strong id="exampleUrl">このページのURL?item=P001&action=checkout</strong>
-                    </div>
-                </div>
-                <div class="input-group">
-                    <label for="scriptUrl">Google Apps Script URL:</label>
-                    <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
-                </div>
-                <button class="btn btn-primary" onclick="saveSettings()">設定を保存</button>
-            </div>
-
-            <div id="loadingView" style="display: none;">
+            <div id="loadingView">
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>処理中...</p>
@@ -387,7 +246,7 @@
                         </div>
                     </div>
 
-                    <div class="action-buttons" id="actionButtons">
+                    <div class="action-buttons" id="actionButtons" style="display: none;">
                         <button class="btn-action btn-checkout" onclick="processAction('checkout')">📤 貸出申請</button>
                         <button class="btn-action btn-return" onclick="processAction('return')">📥 返却申請</button>
                     </div>
@@ -397,74 +256,31 @@
     </div>
 
     <script>
-        const STORAGE_KEY = 'inventory_script_url';
-        let scriptUrl = '';
+        // Google Apps Script URL（固定）
+        const scriptUrl = 'https://script.google.com/macros/s/AKfycby_kSZvq-IkTcm7BeLxnIb8ckVFSkvUUc-7sVTbRCjIzYuJg9YNW_84eOEGSz1lggoj/exec';
 
         // ページ読み込み時の処理
         window.onload = function() {
-            // ローカルストレージから設定を読み込み
-            const savedUrl = localStorage.getItem(STORAGE_KEY);
-            if (savedUrl) {
-                scriptUrl = savedUrl;
-                document.getElementById('scriptUrl').value = savedUrl;
-            }
-
             // URLパラメータを取得
             const urlParams = new URLSearchParams(window.location.search);
             const itemId = urlParams.get('item');
             const action = urlParams.get('action');
 
-            // 例示URLを更新
-            const currentUrl = window.location.href.split('?')[0];
-            document.getElementById('exampleUrl').textContent = currentUrl + '?item=P001&action=checkout';
-
             // URLパラメータがある場合は自動処理
-            if (itemId && scriptUrl) {
-                document.getElementById('setupView').style.display = 'none';
+            if (itemId) {
                 // アクションが指定されている場合はそれを使用、なければ自動判定
                 if (action) {
                     processAction(action, itemId);
                 } else {
                     autoToggleAction(itemId);
                 }
+            } else {
+                // パラメータがない場合はエラー表示
+                displayError('QRコードをスキャンしてください');
             }
         };
 
-        function saveSettings() {
-            const url = document.getElementById('scriptUrl').value.trim();
-            
-            if (!url) {
-                alert('URLを入力してください');
-                return;
-            }
-
-            // 接続テスト
-            fetch(url + '?action=test')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        scriptUrl = url;
-                        localStorage.setItem(STORAGE_KEY, url);
-                        alert('✅ 設定を保存しました！\n\nこのページのURLにパラメータを追加してQRコードを作成してください。');
-                        
-                        // URLパラメータがあれば処理を開始
-                        const urlParams = new URLSearchParams(window.location.search);
-                        const itemId = urlParams.get('item');
-                        if (itemId) {
-                            document.getElementById('setupView').style.display = 'none';
-                            showItemInfo(itemId);
-                        }
-                    } else {
-                        alert('❌ 接続に失敗しました。URLを確認してください。');
-                    }
-                })
-                .catch(error => {
-                    alert('❌ 接続エラー: ' + error.message);
-                });
-        }
-
         function showView(viewName) {
-            document.getElementById('setupView').style.display = 'none';
             document.getElementById('loadingView').style.display = 'none';
             document.getElementById('resultView').style.display = 'none';
             
