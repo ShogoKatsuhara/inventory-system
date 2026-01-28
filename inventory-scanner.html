@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物品管理システム - QRスキャン版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .setup-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .setup-section h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .result {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .result-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .result h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .result p {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .item-details {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: left;
+        }
+
+        .item-detail {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .item-detail:last-child {
+            border-bottom: none;
+        }
+
+        .item-detail label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .item-detail span {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .status-badge.borrowed {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.returned {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .action-buttons {
+            display: grid;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .btn-action {
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-checkout {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-checkout:hover {
+            background: #ffb300;
+            transform: translateY(-2px);
+        }
+
+        .btn-return {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-return:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-back {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-back:hover {
+            background: #5a6268;
+        }
+
+        .instructions {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .instructions h3 {
+            color: #1976D2;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+        }
+
+        .instructions code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .qr-example {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            
+            .container {
+                border-radius: 0;
+                min-height: 100vh;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 物品管理システム</h1>
+            <p>QRコードをスキャンするだけで申請完了</p>
+        </div>
+
+        <div class="content">
+            <div id="setupView" class="setup-section">
+                <h2>🔗 初期設定</h2>
+                <div class="instructions">
+                    <h3>設定方法</h3>
+                    <ol>
+                        <li>Google Apps Script URLを下記に入力</li>
+                        <li>「設定を保存」をクリック</li>
+                        <li>この画面のURLをQRコードに埋め込む</li>
+                    </ol>
+                    <div class="qr-example">
+                        QRコード例:<br>
+                        <strong id="exampleUrl">このページのURL?item=P001&action=checkout</strong>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="scriptUrl">Google Apps Script URL:</label>
+                    <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                </div>
+                <button class="btn btn-primary" onclick="saveSettings()">設定を保存</button>
+            </div>
+
+            <div id="loadingView" style="display: none;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>処理中...</p>
+                </div>
+            </div>
+
+            <div id="resultView" style="display: none;">
+                <div class="result">
+                    <div class="result-icon" id="resultIcon">✅</div>
+                    <h2 id="resultTitle">処理完了</h2>
+                    <p id="resultMessage"></p>
+                    
+                    <div class="item-details" id="itemDetails">
+                        <div class="item-detail">
+                            <label>物品ID:</label>
+                            <span id="itemId">-</span>
+                        </div>
+                        <div class="item-detail">
+                            <label>物品名:</label>
+                            <span id="itemName">-</span>
+                        </div>
+                        <div class="item-detail">
+                            <label>現在の状態:</label>
+                            <span id="itemStatus">-</span>
+                        </div>
+                        <div class="item-detail">
+                            <label>更新日時:</label>
+                            <span id="updateTime">-</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons" id="actionButtons">
+                        <button class="btn-action btn-checkout" onclick="processAction('checkout')">📤 貸出申請</button>
+                        <button class="btn-action btn-return" onclick="processAction('return')">📥 返却申請</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'inventory_script_url';
+        let scriptUrl = '';
+
+        // ページ読み込み時の処理
+        window.onload = function() {
+            // ローカルストレージから設定を読み込み
+            const savedUrl = localStorage.getItem(STORAGE_KEY);
+            if (savedUrl) {
+                scriptUrl = savedUrl;
+                document.getElementById('scriptUrl').value = savedUrl;
+            }
+
+            // URLパラメータを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const itemId = urlParams.get('item');
+            const action = urlParams.get('action');
+
+            // 例示URLを更新
+            const currentUrl = window.location.href.split('?')[0];
+            document.getElementById('exampleUrl').textContent = currentUrl + '?item=P001&action=checkout';
+
+            // URLパラメータがある場合は自動処理
+            if (itemId && scriptUrl) {
+                document.getElementById('setupView').style.display = 'none';
+                // アクションが指定されている場合はそれを使用、なければ自動判定
+                if (action) {
+                    processAction(action, itemId);
+                } else {
+                    autoToggleAction(itemId);
+                }
+            }
+        };
+
+        function saveSettings() {
+            const url = document.getElementById('scriptUrl').value.trim();
+            
+            if (!url) {
+                alert('URLを入力してください');
+                return;
+            }
+
+            // 接続テスト
+            fetch(url + '?action=test')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        scriptUrl = url;
+                        localStorage.setItem(STORAGE_KEY, url);
+                        alert('✅ 設定を保存しました！\n\nこのページのURLにパラメータを追加してQRコードを作成してください。');
+                        
+                        // URLパラメータがあれば処理を開始
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const itemId = urlParams.get('item');
+                        if (itemId) {
+                            document.getElementById('setupView').style.display = 'none';
+                            showItemInfo(itemId);
+                        }
+                    } else {
+                        alert('❌ 接続に失敗しました。URLを確認してください。');
+                    }
+                })
+                .catch(error => {
+                    alert('❌ 接続エラー: ' + error.message);
+                });
+        }
+
+        function showView(viewName) {
+            document.getElementById('setupView').style.display = 'none';
+            document.getElementById('loadingView').style.display = 'none';
+            document.getElementById('resultView').style.display = 'none';
+            
+            document.getElementById(viewName + 'View').style.display = 'block';
+        }
+
+        function autoToggleAction(itemId) {
+            showView('loading');
+
+            // まず現在の状態を取得
+            fetch(scriptUrl + '?action=get&itemId=' + encodeURIComponent(itemId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const currentStatus = data.item.status;
+                        
+                        // 現在の状態に応じて反対のアクションを実行
+                        let newAction;
+                        let newStatus;
+                        
+                        if (currentStatus === '貸出中') {
+                            newAction = 'return';
+                            newStatus = '返却済';
+                        } else {
+                            newAction = 'checkout';
+                            newStatus = '貸出中';
+                        }
+                        
+                        // 状態を更新
+                        fetch(scriptUrl + '?action=update&itemId=' + encodeURIComponent(itemId) + '&status=' + encodeURIComponent(newStatus))
+                            .then(response => response.json())
+                            .then(updateData => {
+                                if (updateData.status === 'success') {
+                                    // 更新後の情報を表示
+                                    const updatedItem = {...data.item, status: newStatus};
+                                    displayResult(updatedItem, newAction, true);
+                                } else {
+                                    displayError('更新に失敗しました');
+                                }
+                            });
+                    } else {
+                        displayError('物品が見つかりません: ' + itemId);
+                    }
+                })
+                .catch(error => {
+                    displayError('エラー: ' + error.message);
+                });
+        }
+
+        function showItemInfo(itemId) {
+            showView('loading');
+
+            fetch(scriptUrl + '?action=get&itemId=' + encodeURIComponent(itemId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        displayResult(data.item, null);
+                    } else {
+                        displayError('物品が見つかりません: ' + itemId);
+                    }
+                })
+                .catch(error => {
+                    displayError('エラー: ' + error.message);
+                });
+        }
+
+        function processAction(action, itemId = null) {
+            // itemIdが指定されていない場合はURLパラメータから取得
+            if (!itemId) {
+                const urlParams = new URLSearchParams(window.location.search);
+                itemId = urlParams.get('item');
+            }
+
+            if (!itemId) {
+                displayError('物品IDが指定されていません');
+                return;
+            }
+
+            showView('loading');
+
+            // アクションを日本語に変換
+            const statusMap = {
+                'checkout': '貸出中',
+                'return': '返却済'
+            };
+            const newStatus = statusMap[action];
+
+            if (!newStatus) {
+                displayError('不明なアクション: ' + action);
+                return;
+            }
+
+            // まず物品情報を取得
+            fetch(scriptUrl + '?action=get&itemId=' + encodeURIComponent(itemId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        // 状態を更新
+                        return fetch(scriptUrl + '?action=update&itemId=' + encodeURIComponent(itemId) + '&status=' + encodeURIComponent(newStatus))
+                            .then(response => response.json())
+                            .then(updateData => {
+                                if (updateData.status === 'success') {
+                                    // 更新後の情報を表示
+                                    const updatedItem = {...data.item, status: newStatus};
+                                    displayResult(updatedItem, action);
+                                } else {
+                                    displayError('更新に失敗しました');
+                                }
+                            });
+                    } else {
+                        displayError('物品が見つかりません: ' + itemId);
+                    }
+                })
+                .catch(error => {
+                    displayError('エラー: ' + error.message);
+                });
+        }
+
+        function displayResult(item, action, isAutoToggle = false) {
+            showView('result');
+
+            const actionMessages = {
+                'checkout': isAutoToggle ? '自動で貸出申請が完了しました' : '貸出申請が完了しました',
+                'return': isAutoToggle ? '自動で返却申請が完了しました' : '返却申請が完了しました',
+                null: '物品情報を表示しています'
+            };
+
+            document.getElementById('resultIcon').textContent = action ? '✅' : '📦';
+            document.getElementById('resultTitle').textContent = action ? '申請完了' : '物品情報';
+            document.getElementById('resultMessage').textContent = actionMessages[action];
+
+            document.getElementById('itemId').textContent = item.id;
+            document.getElementById('itemName').textContent = item.name;
+            
+            const statusClass = item.status === '返却済' ? 'returned' : 'borrowed';
+            document.getElementById('itemStatus').innerHTML = 
+                `<span class="status-badge ${statusClass}">${item.status}</span>`;
+            
+            document.getElementById('updateTime').textContent = new Date().toLocaleString('ja-JP');
+
+            // 自動トグルの場合はアクションボタンを非表示
+            if (action || isAutoToggle) {
+                document.getElementById('actionButtons').style.display = 'none';
+            } else {
+                document.getElementById('actionButtons').style.display = 'grid';
+            }
+        }
+
+        function displayError(message) {
+            showView('result');
+            
+            document.getElementById('resultIcon').textContent = '❌';
+            document.getElementById('resultTitle').textContent = 'エラー';
+            document.getElementById('resultMessage').textContent = message;
+            document.getElementById('itemDetails').style.display = 'none';
+            document.getElementById('actionButtons').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
