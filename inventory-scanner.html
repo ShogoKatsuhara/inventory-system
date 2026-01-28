@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>物品管理システム - QRスキャン版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -146,21 +147,94 @@
             color: #155724;
         }
 
-        .success {
-            color: #28a745;
-        }
-
-        .error {
-            color: #dc3545;
-        }
-
-        .action-buttons {
-            display: grid;
-            gap: 12px;
+        .user-scan-section {
             margin-top: 25px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 12px;
+            border: 2px dashed #2196F3;
         }
 
-        .btn-action {
+        .user-scan-section h3 {
+            color: #1976D2;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .user-scan-section p {
+            color: #555;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .user-input-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .user-input-section h3 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .divider {
+            margin: 25px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider span {
+            position: relative;
+            background: white;
+            padding: 0 15px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        #userReader {
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .btn {
+            width: 100%;
             padding: 14px;
             border: none;
             border-radius: 10px;
@@ -168,26 +242,35 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            margin-top: 10px;
         }
 
-        .btn-checkout {
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-skip {
             background: #ffc107;
             color: #333;
         }
 
-        .btn-checkout:hover {
+        .btn-skip:hover {
             background: #ffb300;
-            transform: translateY(-2px);
-        }
-
-        .btn-return {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-return:hover {
-            background: #218838;
-            transform: translateY(-2px);
         }
 
         @media (max-width: 768px) {
@@ -221,6 +304,34 @@
                 </div>
             </div>
 
+            <div id="userScanView" style="display: none;">
+                <div class="result">
+                    <div class="result-icon">👤</div>
+                    <h2>利用者情報を入力</h2>
+                    <p id="itemInfoText">物品の貸出処理を完了するため、利用者情報を入力してください</p>
+                    
+                    <div class="user-input-section">
+                        <h3>✏️ 利用者IDを入力</h3>
+                        <div class="input-group">
+                            <input type="text" id="userIdInput" placeholder="社員番号や学籍番号を入力" onkeypress="if(event.key==='Enter') submitUserId()">
+                            <button class="btn btn-primary" onclick="submitUserId()">確定</button>
+                        </div>
+                    </div>
+
+                    <div class="divider">
+                        <span>または</span>
+                    </div>
+                    
+                    <div class="user-scan-section">
+                        <h3>📷 QRコードでスキャン</h3>
+                        <p>利用者のQRコードをカメラにかざしてください</p>
+                        <div id="userReader"></div>
+                    </div>
+
+                    <button class="btn btn-skip" onclick="skipUserScan()">スキップして完了</button>
+                </div>
+            </div>
+
             <div id="resultView" style="display: none;">
                 <div class="result">
                     <div class="result-icon" id="resultIcon">✅</div>
@@ -240,15 +351,14 @@
                             <label>現在の状態:</label>
                             <span id="itemStatus">-</span>
                         </div>
+                        <div class="item-detail" id="userIdRow" style="display: none;">
+                            <label>利用者:</label>
+                            <span id="userId">-</span>
+                        </div>
                         <div class="item-detail">
                             <label>更新日時:</label>
                             <span id="updateTime">-</span>
                         </div>
-                    </div>
-
-                    <div class="action-buttons" id="actionButtons" style="display: none;">
-                        <button class="btn-action btn-checkout" onclick="processAction('checkout')">📤 貸出申請</button>
-                        <button class="btn-action btn-return" onclick="processAction('return')">📥 返却申請</button>
                     </div>
                 </div>
             </div>
@@ -259,6 +369,11 @@
         // Google Apps Script URL（固定）
         const scriptUrl = 'https://script.google.com/macros/s/AKfycby_kSZvq-IkTcm7BeLxnIb8ckVFSkvUUc-7sVTbRCjIzYuJg9YNW_84eOEGSz1lggoj/exec';
 
+        let currentItemId = '';
+        let currentItemData = null;
+        let newStatus = '';
+        let html5QrCode = null;
+
         // ページ読み込み時の処理
         window.onload = function() {
             // URLパラメータを取得
@@ -268,6 +383,7 @@
 
             // URLパラメータがある場合は自動処理
             if (itemId) {
+                currentItemId = itemId;
                 // アクションが指定されている場合はそれを使用、なければ自動判定
                 if (action) {
                     processAction(action, itemId);
@@ -282,6 +398,7 @@
 
         function showView(viewName) {
             document.getElementById('loadingView').style.display = 'none';
+            document.getElementById('userScanView').style.display = 'none';
             document.getElementById('resultView').style.display = 'none';
             
             document.getElementById(viewName + 'View').style.display = 'block';
@@ -295,32 +412,19 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
+                        currentItemData = data.item;
                         const currentStatus = data.item.status;
                         
                         // 現在の状態に応じて反対のアクションを実行
-                        let newAction;
-                        let newStatus;
-                        
                         if (currentStatus === '貸出中') {
-                            newAction = 'return';
                             newStatus = '返却済';
+                            // 返却の場合は利用者スキャン不要
+                            updateItemStatus('');
                         } else {
-                            newAction = 'checkout';
                             newStatus = '貸出中';
+                            // 貸出の場合は利用者QRコードをスキャン
+                            showUserScanView();
                         }
-                        
-                        // 状態を更新
-                        fetch(scriptUrl + '?action=update&itemId=' + encodeURIComponent(itemId) + '&status=' + encodeURIComponent(newStatus))
-                            .then(response => response.json())
-                            .then(updateData => {
-                                if (updateData.status === 'success') {
-                                    // 更新後の情報を表示
-                                    const updatedItem = {...data.item, status: newStatus};
-                                    displayResult(updatedItem, newAction, true);
-                                } else {
-                                    displayError('更新に失敗しました');
-                                }
-                            });
                     } else {
                         displayError('物品が見つかりません: ' + itemId);
                     }
@@ -330,35 +434,7 @@
                 });
         }
 
-        function showItemInfo(itemId) {
-            showView('loading');
-
-            fetch(scriptUrl + '?action=get&itemId=' + encodeURIComponent(itemId))
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        displayResult(data.item, null);
-                    } else {
-                        displayError('物品が見つかりません: ' + itemId);
-                    }
-                })
-                .catch(error => {
-                    displayError('エラー: ' + error.message);
-                });
-        }
-
-        function processAction(action, itemId = null) {
-            // itemIdが指定されていない場合はURLパラメータから取得
-            if (!itemId) {
-                const urlParams = new URLSearchParams(window.location.search);
-                itemId = urlParams.get('item');
-            }
-
-            if (!itemId) {
-                displayError('物品IDが指定されていません');
-                return;
-            }
-
+        function processAction(action, itemId) {
             showView('loading');
 
             // アクションを日本語に変換
@@ -366,7 +442,7 @@
                 'checkout': '貸出中',
                 'return': '返却済'
             };
-            const newStatus = statusMap[action];
+            newStatus = statusMap[action];
 
             if (!newStatus) {
                 displayError('不明なアクション: ' + action);
@@ -378,18 +454,15 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // 状態を更新
-                        return fetch(scriptUrl + '?action=update&itemId=' + encodeURIComponent(itemId) + '&status=' + encodeURIComponent(newStatus))
-                            .then(response => response.json())
-                            .then(updateData => {
-                                if (updateData.status === 'success') {
-                                    // 更新後の情報を表示
-                                    const updatedItem = {...data.item, status: newStatus};
-                                    displayResult(updatedItem, action);
-                                } else {
-                                    displayError('更新に失敗しました');
-                                }
-                            });
+                        currentItemData = data.item;
+                        
+                        if (action === 'checkout') {
+                            // 貸出の場合は利用者QRコードをスキャン
+                            showUserScanView();
+                        } else {
+                            // 返却の場合は利用者スキャン不要
+                            updateItemStatus('');
+                        }
                     } else {
                         displayError('物品が見つかりません: ' + itemId);
                     }
@@ -399,7 +472,109 @@
                 });
         }
 
-        function displayResult(item, action, isAutoToggle = false) {
+        function showUserScanView() {
+            showView('userScan');
+            
+            document.getElementById('itemInfoText').textContent = 
+                `${currentItemData.name}（ID: ${currentItemData.id}）の貸出処理を完了するため、利用者情報を入力してください`;
+            
+            // 入力欄をクリア
+            document.getElementById('userIdInput').value = '';
+            
+            // QRコードスキャナーを起動
+            startUserQrScanner();
+        }
+
+        function submitUserId() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            
+            if (!userId) {
+                alert('利用者IDを入力してください');
+                return;
+            }
+            
+            // QRスキャナーを停止
+            if (html5QrCode) {
+                html5QrCode.stop();
+            }
+            
+            // 利用者IDを使って物品を更新
+            updateItemStatus(userId);
+        }
+
+        function startUserQrScanner() {
+            html5QrCode = new Html5Qrcode("userReader");
+            
+            const config = { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 }
+            };
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                onUserQrScanSuccess,
+                onUserQrScanError
+            ).catch(err => {
+                console.error("カメラの起動に失敗:", err);
+                // カメラが使えない場合はスキップを促す
+                alert('カメラの起動に失敗しました。「スキップして完了」ボタンを押してください。');
+            });
+        }
+
+        function onUserQrScanSuccess(decodedText, decodedResult) {
+            // スキャン成功
+            if (html5QrCode) {
+                html5QrCode.stop().catch(err => console.log(err));
+            }
+            
+            // 利用者IDを使って物品を更新
+            updateItemStatus(decodedText);
+        }
+
+        function onUserQrScanError(errorMessage) {
+            // エラーは無視（頻繁に発生するため）
+        }
+
+        function skipUserScan() {
+            if (html5QrCode) {
+                html5QrCode.stop().catch(err => console.log(err));
+            }
+            updateItemStatus('');
+        }
+
+        function updateItemStatus(userId) {
+            showView('loading');
+
+            let updateUrl = scriptUrl + 
+                '?action=update&itemId=' + encodeURIComponent(currentItemId) + 
+                '&status=' + encodeURIComponent(newStatus);
+            
+            if (userId) {
+                updateUrl += '&userId=' + encodeURIComponent(userId);
+            }
+
+            fetch(updateUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const actionType = newStatus === '貸出中' ? 'checkout' : 'return';
+                        const updatedItem = {
+                            ...currentItemData, 
+                            status: newStatus,
+                            lastUser: userId || currentItemData.lastUser
+                        };
+                        displayResult(updatedItem, actionType, true, userId);
+                    } else {
+                        displayError('更新に失敗しました');
+                    }
+                })
+                .catch(error => {
+                    displayError('エラー: ' + error.message);
+                });
+        }
+
+        function displayResult(item, action, isAutoToggle = false, userId = '') {
             showView('result');
 
             const actionMessages = {
@@ -419,14 +594,15 @@
             document.getElementById('itemStatus').innerHTML = 
                 `<span class="status-badge ${statusClass}">${item.status}</span>`;
             
-            document.getElementById('updateTime').textContent = new Date().toLocaleString('ja-JP');
-
-            // 自動トグルの場合はアクションボタンを非表示
-            if (action || isAutoToggle) {
-                document.getElementById('actionButtons').style.display = 'none';
+            // 利用者情報を表示
+            if (userId || item.lastUser) {
+                document.getElementById('userIdRow').style.display = 'flex';
+                document.getElementById('userId').textContent = userId || item.lastUser;
             } else {
-                document.getElementById('actionButtons').style.display = 'grid';
+                document.getElementById('userIdRow').style.display = 'none';
             }
+            
+            document.getElementById('updateTime').textContent = new Date().toLocaleString('ja-JP');
         }
 
         function displayError(message) {
@@ -436,7 +612,6 @@
             document.getElementById('resultTitle').textContent = 'エラー';
             document.getElementById('resultMessage').textContent = message;
             document.getElementById('itemDetails').style.display = 'none';
-            document.getElementById('actionButtons').style.display = 'none';
         }
     </script>
 </body>
